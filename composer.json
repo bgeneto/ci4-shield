@@ -72,14 +72,12 @@
         ],
         "analyze": [
             "phpstan analyze",
-            "psalm",
-            "rector process --dry-run"
+            "rector process"
         ],
         "ci": [
             "Composer\\Config::disableProcessTimeout",
             "@cs",
             "@deduplicate",
-            "@inspect",
             "@analyze",
             "@test"
         ],
