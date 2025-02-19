@@ -31,6 +31,7 @@ $finder = Finder::create()
 $overrides = [
     'declare_strict_types' => true,
     'void_return'          => true,
+    'modernize_strpos'     => ['modernize_stripos' => true],
 ];
 
 $options = [
