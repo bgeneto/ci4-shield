@@ -168,7 +168,13 @@ $ignoreErrors[] = [
 $ignoreErrors[] = [
 	'message' => '#^Cannot access property \\$id on array\\<string, string\\>\\|object\\.$#',
 	'identifier' => 'property.nonObject',
-	'count' => 7,
+	'count' => 9,
+	'path' => __DIR__ . '/src/Commands/Hmac.php',
+];
+$ignoreErrors[] = [
+	'message' => '#^Cannot access property \\$expires on array\\<string, string\\>\\|object\\.$#',
+	'identifier' => 'property.nonObject',
+	'count' => 3,
 	'path' => __DIR__ . '/src/Commands/Hmac.php',
 ];
 $ignoreErrors[] = [
@@ -259,7 +265,7 @@ $ignoreErrors[] = [
 $ignoreErrors[] = [
 	'message' => '#^Call to function model with CodeIgniter\\\\Shield\\\\Models\\\\UserIdentityModel\\:\\:class is discouraged\\.$#',
 	'identifier' => 'codeigniter.factoriesClassConstFetch',
-	'count' => 19,
+	'count' => 23,
 	'path' => __DIR__ . '/src/Entities/User.php',
 ];
 $ignoreErrors[] = [
