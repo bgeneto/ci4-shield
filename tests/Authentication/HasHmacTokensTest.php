@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Tests\Authentication;
 
+use CodeIgniter\I18n\Time;
 use CodeIgniter\Shield\Entities\AccessToken;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserIdentityModel;
@@ -135,11 +136,11 @@ final class HasHmacTokensTest extends DatabaseTestCase
 
     public function testHmacTokenCanBasics(): void
     {
-        $token = $this->user->generateHmacToken('foo', ['foo:bar']);
+        $token = $this->user->generateHmacToken('foo', ['foo.bar']);
         $this->user->setHmacToken($token);
 
-        $this->assertTrue($this->user->hmacTokenCan('foo:bar'));
-        $this->assertFalse($this->user->hmacTokenCan('foo:baz'));
+        $this->assertTrue($this->user->hmacTokenCan('foo.bar'));
+        $this->assertFalse($this->user->hmacTokenCan('foo.baz'));
     }
 
     public function testHmacTokenCantNoTokenSet(): void
@@ -149,10 +150,110 @@ final class HasHmacTokensTest extends DatabaseTestCase
 
     public function testHmacTokenCant(): void
     {
-        $token = $this->user->generateHmacToken('foo', ['foo:bar']);
+        $token = $this->user->generateHmacToken('foo', ['foo.bar']);
         $this->user->setHmacToken($token);
 
-        $this->assertFalse($this->user->hmacTokenCant('foo:bar'));
-        $this->assertTrue($this->user->hmacTokenCant('foo:baz'));
+        $this->assertFalse($this->user->hmacTokenCant('foo.bar'));
+        $this->assertTrue($this->user->hmacTokenCant('foo.baz'));
+    }
+
+    /**
+     * See https://github.com/codeigniter4/shield/issues/926
+     */
+    public function testGenerateTokenWithExpiration(): void
+    {
+        $tokenExpiration = Time::parse('2024-11-03 12:00:00');
+
+        $token = $this->user->generateHmacToken('foo', ['foo.bar'], $tokenExpiration);
+        $this->user->setHmacToken($token);
+
+        $this->assertSame($tokenExpiration->format('Y-m-d h:i:s'), $this->user->currentHmacToken()->expires->format('Y-m-d h:i:s'));
+
+        $tokenExpiration = $tokenExpiration->addMonths(1)->addYears(1);
+
+        $token = $this->user->generateHmacToken('foo', ['foo.bar'], $tokenExpiration);
+        $this->user->setHmacToken($token);
+
+        $this->assertSame($tokenExpiration->format('Y-m-d h:i:s'), $this->user->currentHmacToken()->expires->format('Y-m-d h:i:s'));
+    }
+
+    /**
+     * See https://github.com/codeigniter4/shield/issues/926
+     */
+    public function testSetTokenExpirationById(): void
+    {
+        $token = $this->user->generateHmacToken('foo', ['foo.bar']);
+
+        $this->user->setHmacToken($token);
+
+        $this->assertNull($this->user->currentHmacToken()->expires);
+
+        $tokenExpiration = Time::parse('2024-11-03 12:00:00');
+
+        $this->assertTrue($this->user->updateHmacTokenExpiration($token->id, $tokenExpiration));
+
+        $this->user->setHmacToken($this->user->getHmacTokenById($token->id));
+        $this->assertSame($tokenExpiration->format('Y-m-d h:i:s'), $this->user->currentHmacToken()->expires->format('Y-m-d h:i:s'));
+    }
+
+    /**
+     * See https://github.com/codeigniter4/shield/issues/926
+     */
+    public function testIsHmacTokenExpired(): void
+    {
+        $tokenExpiration = Time::parse('2024-11-03 12:00:00');
+
+        $token = $this->user->generateHmacToken('foo', ['foo.bar'], $tokenExpiration);
+        $this->user->setHmacToken($token);
+
+        $this->assertTrue($this->user->isHmacTokenExpired($token));
+    }
+
+    /**
+     * See https://github.com/codeigniter4/shield/issues/926
+     */
+    public function testHmacTokenTimeToExpired(): void
+    {
+        $tokenExpiration = Time::now();
+        $tokenExpiration = $tokenExpiration->addYears(1);
+
+        $token = $this->user->generateHmacToken('foo', ['foo.bar'], $tokenExpiration);
+
+        $this->assertSame('in 1 year', $token->expires->humanize());
+    }
+
+    /**
+     * See https://github.com/codeigniter4/shield/issues/926
+     */
+    public function testcanHmacTokenExpire(): void
+    {
+        $tokenExpiration = Time::now();
+        $tokenExpiration = $tokenExpiration->addYears(1);
+
+        $token = $this->user->generateHmacToken('foo', ['foo.bar'], $tokenExpiration);
+
+        $this->assertTrue($this->user->canHmacTokenExpire($token));
+
+        $token = $this->user->generateHmacToken('foo', ['foo.bar']);
+
+        $this->assertFalse($this->user->canHmacTokenExpire($token));
+    }
+
+    /**
+     * See https://github.com/codeigniter4/shield/issues/926
+     */
+    public function testHmacTokenRemoveExpiration(): void
+    {
+        $tokenExpiration = Time::now()->addYears(1);
+
+        $token = $this->user->generateHmacToken('hmac', ['foo.bar'], $tokenExpiration);
+
+        $this->user->setHmacToken($token);
+
+        $this->assertTrue($this->user->canHmacTokenExpire($token));
+
+        $this->assertTrue($this->user->removeHmacTokenExpiration($token->id));
+
+        $this->assertFalse($this->user->canHmacTokenExpire($this->user->currentHmacToken()));
     }
 }
